@@ -1,6 +1,26 @@
-# Refiber
+# An Example of Refiber's CRUD
 
-A web framework based on the [Gofiber](gofiber.io) framework, follows the MVC architecture (Model, View & Controller).
+<img src="./public/crud-example-app.jpeg">
+<br>
+<br>
+
+# How to run it?
+
+I recommend using [Air](https://github.com/cosmtrek/air) for live reloading.
+
+```
+git clone https://github.com/refiber/example-crud.git
+
+cd example-crud
+
+npm i && npm run build
+
+air
+```
+
+## Refiber
+
+Refiber is a web framework based on the [Gofiber](gofiber.io) framework, follows the MVC architecture (Model, View & Controller).
 
 Refiber comes with [Inertia.js](https://inertiajs.com/) built-in. [Inertia.js](https://inertiajs.com/) is a powerful tool for creating Single Page Applications (SPA) without needing a separate API.
 
