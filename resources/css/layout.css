@@ -1,0 +1,7 @@
+html {
+  @apply bg-gray-100
+}
+
+body, html, #app {
+  @apply h-full
+}
