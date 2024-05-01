@@ -1,8 +1,6 @@
-# An Example of Refiber's CRUD
+# An example of CRUD operations in Refiber
 
 <img src="./public/crud-example-app.jpeg">
-<br>
-<br>
 
 # How to run it?
 
@@ -17,6 +15,8 @@ npm i && npm run build
 
 air
 ```
+
+> If you're new to the Refiber framework, simply open the route file at `/routes/web.go`, then follow the pattern from the route to the controller and finally to the view.
 
 ## Refiber
 
