@@ -35,4 +35,8 @@ func RegisterWeb(route router.RouterInterface, app *app.App) {
 		crud.Controller = controller.Product()
 	}, m.AuthWeb)
 
+	route.CRUD("/categories", func(crud *router.Crud) {
+		// TODO: add crud.except = Show
+		crud.Controller = controller.Category()
+	}, m.AuthWeb)
 }

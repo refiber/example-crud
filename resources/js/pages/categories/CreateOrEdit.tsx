@@ -6,43 +6,38 @@ import Card from "components/Card";
 import Input from "components/Input";
 import Header from "components/Header";
 import Button from "components/Button";
-import Textarea from "components/Textarea";
 import Breadcrumbs from "components/Breadcrumbs";
 import Layout, { Body } from "components/Layout";
 import ConfirmationModal, {
 	ConfirmationModalHandle,
 } from "components/ConfirmationModal";
-import Select from "components/Select";
 
 import { getBreadcrumbs } from "./data";
-import { Product } from "types/product";
 import { Category } from "types/category";
 
-type ProductsCreateOrEditPageProps = {
-	product: Product | undefined;
-	categories: Category[];
+type CategoryCreateOrEditPageProps = {
+	category: Category | undefined;
 };
 
-export default function ProductsCreateOrEditPage({
-	product,
-	categories,
-}: ProductsCreateOrEditPageProps) {
+export default function CategoryCreateOrEditPage({
+	category,
+}: CategoryCreateOrEditPageProps) {
 	const pages = useMemo(
 		() => [
 			{
-				name: product?.title || "Create",
-				href: product?.id ? `/products/${product.id}/edit` : "/products/create",
+				name: category?.title || "Create",
+				href: category?.id
+					? `/categories/${category.id}/edit`
+					: "/categories/create",
 			},
 		],
-		[product]
+		[category]
 	);
 
 	const confirmationModalRef = useRef<ConfirmationModalHandle>(null);
 
 	const form = useForm({
-		title: product?.title || "",
-		description: product?.description || "",
-		categoryId: product?.category?.id,
+		title: category?.title || "",
 	});
 
 	return (
@@ -51,7 +46,7 @@ export default function ProductsCreateOrEditPage({
 
 			<Header
 				rightElement={
-					product ? (
+					category ? (
 						<Button
 							onClick={() => confirmationModalRef.current?.onOpen()}
 							className="bg-red-600 hover:bg-red-500"
@@ -61,7 +56,7 @@ export default function ProductsCreateOrEditPage({
 					) : undefined
 				}
 			>
-				{product?.title || "Create New Product"}
+				{category?.title || "Create New Category"}
 			</Header>
 
 			<Body>
@@ -75,18 +70,18 @@ export default function ProductsCreateOrEditPage({
 								(e as any).target[errKeys[0]].focus();
 							};
 
-							if (product) {
-								return form.put(`/products/${product.id}/edit`, {
+							if (category) {
+								return form.put(`/categories/${category.id}/edit`, {
 									onError,
 									onSuccess: () => form.setDefaults(),
 								});
 							}
-							return form.post("/products/create", { onError });
+							return form.post("/categories/create", { onError });
 						}}
 					>
 						<Form.Body>
 							<Form.Section.Main
-								title="Product"
+								title="Category"
 								description="This information will be displayed publicly so be careful what you share."
 							>
 								<Form.Section.Body>
@@ -101,44 +96,6 @@ export default function ProductsCreateOrEditPage({
 												error={form.errors.title}
 												value={form.data.title}
 												onChange={(e) => form.setData("title", e.target.value)}
-											/>
-										</Form.Field>
-									</Form.InputGroup>
-
-									<Form.InputGroup>
-										<Form.Label htmlFor="cateogry">Category</Form.Label>
-										<Form.Field>
-											<Select
-												id="category"
-												name="category"
-												value={form.data.categoryId}
-												className="sm:max-w-xs"
-												onChange={(e) =>
-													form.setData("categoryId", e.target.value)
-												}
-											>
-												<option>Choose category</option>
-												{categories.map((c) => (
-													<option key={c.id} value={c.id}>
-														{c.title}
-													</option>
-												))}
-											</Select>
-										</Form.Field>
-									</Form.InputGroup>
-
-									<Form.InputGroup>
-										<Form.Label htmlFor="description">Description</Form.Label>
-										<Form.Field>
-											<Textarea
-												id="description"
-												name="description"
-												value={form.data.description}
-												error={form.errors.description}
-												onChange={(e) =>
-													form.setData("description", e.target.value)
-												}
-												helper="Write a few sentences about the product."
 											/>
 										</Form.Field>
 									</Form.InputGroup>
@@ -164,19 +121,19 @@ export default function ProductsCreateOrEditPage({
 				</Card>
 			</Body>
 
-			{product && (
+			{category && (
 				<ConfirmationModal
 					ref={confirmationModalRef}
-					title="Delete product"
-					description="Are you sure want to delete this Product? Data will be permanently removed. This action cannot be undone."
+					title="Delete category"
+					description="Are you sure want to delete this Category? Data will be permanently removed. This action cannot be undone."
 					confirmTextButton="Delete"
-					onConfirm={() => router.delete(`/products/${product.id}/delete`)}
+					onConfirm={() => router.delete(`/categories/${category.id}/delete`)}
 				/>
 			)}
 		</>
 	);
 }
 
-ProductsCreateOrEditPage.layout = (page: React.ReactNode) => (
+CategoryCreateOrEditPage.layout = (page: React.ReactNode) => (
 	<Layout children={page} />
 );

@@ -1,6 +1,9 @@
 package web
 
 import (
+	"strconv"
+	"sync"
+
 	"bykevin.work/refiber/app/models"
 	"github.com/gofiber/fiber/v2"
 	support "github.com/refiber/framework/support"
@@ -35,8 +38,15 @@ func (c *productController) Index(s support.Refiber) error {
 
 // Displays a page for creating new data.
 func (c *productController) Create(s support.Refiber) error {
+	var categories []*models.Category
+	if err := c.db.Order("created_at DESC").Find(&categories).Error; err != nil {
+		log.Error().Err(err).Msg("CategoryController.Index")
+	}
+
 	// open page file at /resources/js/pages/product/CreateOrEdit.tsx
-	return c.inertia.Render().Page("products/CreateOrEdit", nil)
+	return c.inertia.Render().Page("products/CreateOrEdit", &fiber.Map{
+		"categories": categories,
+	})
 }
 
 // Handles a POST request to create new data.
@@ -44,7 +54,7 @@ func (c *productController) Store(s support.Refiber) error {
 	type FormData struct {
 		Title       string `validate:"required,min=3,max=100"`
 		Description *string
-		CategoryID  *int
+		CategoryID  *string
 	}
 	formData := new(FormData)
 
@@ -70,9 +80,13 @@ func (c *productController) Store(s support.Refiber) error {
 	product := models.Product{
 		Title:       formData.Title,
 		Description: formData.Description,
-		CategoryID:  formData.CategoryID,
 		CreatedByID: user.ID,
 	}
+	// TODO: check category id in DB
+	if categoryID, err := strconv.Atoi(*formData.CategoryID); err == nil {
+		product.CategoryID = &categoryID
+	}
+
 	if err := c.db.Create(&product).Error; err != nil {
 		log.Error().Err(err).Msg("ProductController.Store")
 		return s.Redirect().Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
@@ -90,15 +104,33 @@ func (c *productController) Show(s support.Refiber) error {
 func (c *productController) Edit(s support.Refiber) error {
 	productID := s.GetCtx().Params("id")
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
 	var product models.Product
-	if err := c.db.Find(&product, productID).Error; err != nil {
-		// TODO: check if not found
-		log.Error().Err(err).Msg("ProductController.Edit")
-	}
+	go func() {
+		defer wg.Done()
+		if err := c.db.Preload("Category").Find(&product, productID).Error; err != nil {
+			// TODO: check if not found
+			log.Error().Err(err).Msg("ProductController.Edit")
+		}
+	}()
+
+	wg.Add(1)
+	var categories []*models.Category
+	go func() {
+		defer wg.Done()
+		if err := c.db.Order("created_at DESC").Find(&categories).Error; err != nil {
+			log.Error().Err(err).Msg("CategoryController.Index")
+		}
+	}()
+
+	wg.Wait()
 
 	// open page file at /resources/js/pages/product/Index.tsx
 	return c.inertia.Render().Page("products/CreateOrEdit", &fiber.Map{
-		"product": product,
+		"product":    product,
+		"categories": categories,
 	})
 }
 
@@ -107,7 +139,7 @@ func (c *productController) Update(s support.Refiber) error {
 	type FormData struct {
 		Title       string `validate:"required,min=3,max=100"`
 		Description *string
-		CategoryID  *int
+		CategoryID  *string
 	}
 	formData := new(FormData)
 
@@ -134,7 +166,11 @@ func (c *productController) Update(s support.Refiber) error {
 	// update product data
 	product.Title = formData.Title
 	product.Description = formData.Description
-	product.CategoryID = formData.CategoryID
+	// TODO: check category id in DB
+	if categoryID, err := strconv.Atoi(*formData.CategoryID); err == nil {
+		product.CategoryID = &categoryID
+	}
+
 	if err := c.db.Save(&product).Error; err != nil {
 		log.Error().Err(err).Msg("ProductController.Update")
 		return s.Redirect().Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()

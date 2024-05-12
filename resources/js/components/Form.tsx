@@ -41,7 +41,7 @@ const SectionMain = ({
 			<div className="space-y-1 mb-10">
 				{title && (
 					<h2 className="text-base font-semibold leading-7 text-gray-900">
-						Product
+						{title}
 					</h2>
 				)}
 

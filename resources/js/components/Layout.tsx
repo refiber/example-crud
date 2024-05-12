@@ -11,6 +11,7 @@ import { cn } from "lib/helpers";
 const navigationData = [
 	{ name: "Dashboard", href: "/" },
 	{ name: "Products", href: "/products" },
+	{ name: "Categories", href: "/categories" },
 ];
 
 const userNavigation = [
