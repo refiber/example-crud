@@ -8,9 +8,11 @@ import (
 	"bykevin.work/refiber/app/middleware"
 )
 
-func RegisterWeb(route router.RouterInterface, app *app.App) {
+func RegisterWeb(r router.RouterInterface, app *app.App) {
 	m := middleware.Setup(app)
 	controller := web.Setup(app)
+
+	route := r.Group("/", m.SharedWeb)
 
 	route.Get("/", controller.Index, m.AuthWeb)
 

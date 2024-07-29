@@ -6,6 +6,6 @@
   <title>Refiber</title>
 </head>
 <body>
-  {{raw .refiber}}
+  {{inertia .props}}
 </body>
 </html>

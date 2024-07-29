@@ -4,17 +4,19 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/storage/badger/v2"
+	_ "github.com/joho/godotenv/autoload"
 	refiber "github.com/refiber/framework"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 
 	"bykevin.work/refiber/app"
 	"bykevin.work/refiber/database"
 	"bykevin.work/refiber/routes"
-	_ "github.com/joho/godotenv/autoload"
-
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 )
 
 func main() {
@@ -34,14 +36,29 @@ func main() {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Caller().Logger()
 	}
 
+	/**
+	 * SessionStorage config
+	 * you can also use redis instead: https://docs.gofiber.io/storage
+	 */
+	storage := badger.New(badger.Config{
+		Database:   "./storage/framework/sessions",
+		Reset:      false,
+		GCInterval: 10 * time.Second,
+	})
+
 	refiber, router, support := refiber.New(refiber.Config{
-		AppName: os.Getenv("APP_NAME"),
+		AppName:        os.Getenv("APP_NAME"),
+		SessionStorage: storage,
 	})
 
 	db := database.New()
 
 	app := app.New(support, db)
 	routes.RegisterWeb(router, app)
+
+	refiber.Use(func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusNotFound).Render("404", nil)
+	})
 
 	go func() {
 		if err := refiber.Listen(":" + os.Getenv("PORT")); err != nil {
