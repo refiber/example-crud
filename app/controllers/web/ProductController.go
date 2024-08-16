@@ -4,10 +4,11 @@ import (
 	"strconv"
 	"sync"
 
-	"bykevin.work/refiber/app/models"
 	"github.com/gofiber/fiber/v2"
 	support "github.com/refiber/framework/support"
 	"github.com/rs/zerolog/log"
+
+	"bykevin.work/refiber/app/models"
 )
 
 /**
@@ -23,34 +24,34 @@ func (web *webController) Product() *productController {
 type productController struct{ webController }
 
 // Displays a page listing the data.
-func (c *productController) Index(s support.Refiber) error {
+func (ctr *productController) Index(s support.Refiber, c *fiber.Ctx) error {
 	var products []*models.Product
 
-	if err := c.db.Preload("Category").Preload("CreatedBy").Order("created_at DESC").Find(&products).Error; err != nil {
+	if err := ctr.db.Preload("Category").Preload("CreatedBy").Order("created_at DESC").Find(&products).Error; err != nil {
 		log.Error().Err(err).Msg("ProductController.Index")
 	}
 
 	// open page file at /resources/js/pages/product/Index.tsx
-	return c.inertia.Render().Page("products/Index", &fiber.Map{
+	return ctr.inertia.Render(c).Page("products/Index", &fiber.Map{
 		"products": products,
 	})
 }
 
 // Displays a page for creating new data.
-func (c *productController) Create(s support.Refiber) error {
+func (ctr *productController) Create(s support.Refiber, c *fiber.Ctx) error {
 	var categories []*models.Category
-	if err := c.db.Order("created_at DESC").Find(&categories).Error; err != nil {
+	if err := ctr.db.Order("created_at DESC").Find(&categories).Error; err != nil {
 		log.Error().Err(err).Msg("CategoryController.Index")
 	}
 
 	// open page file at /resources/js/pages/product/CreateOrEdit.tsx
-	return c.inertia.Render().Page("products/CreateOrEdit", &fiber.Map{
+	return ctr.inertia.Render(c).Page("products/CreateOrEdit", &fiber.Map{
 		"categories": categories,
 	})
 }
 
 // Handles a POST request to create new data.
-func (c *productController) Store(s support.Refiber) error {
+func (ctr *productController) Store(s support.Refiber, c *fiber.Ctx) error {
 	type FormData struct {
 		Title       string `validate:"required,min=3,max=100"`
 		Description *string
@@ -58,22 +59,26 @@ func (c *productController) Store(s support.Refiber) error {
 	}
 	formData := new(FormData)
 
+	redirect := s.Redirect(c)
+
 	// parse request body to formData
-	if err := s.GetCtx().BodyParser(formData); err != nil {
+	if err := c.BodyParser(formData); err != nil {
 		log.Error().Err(err).Msg("ProductController.Store")
-		return s.Redirect().Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
+		return redirect.Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
 	}
 
+	validation := s.Validation(c)
+
 	// validate formData
-	if err := s.Validate(formData); err != nil {
-		return s.Redirect().Back().Now()
+	if err := validation.Validate(formData); err != nil {
+		return redirect.Back().Now()
 	}
 
 	// get authenticated user
 	var user models.User
-	if err := s.GetAuthenticatedUserSession(&user); err != nil {
+	if err := s.Auth(c).GetAuthenticatedUserSession(&user); err != nil {
 		log.Error().Err(err).Msg("ProductController.Store")
-		return s.Redirect().Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
+		return redirect.Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
 	}
 
 	// save product data to db
@@ -87,22 +92,22 @@ func (c *productController) Store(s support.Refiber) error {
 		product.CategoryID = &categoryID
 	}
 
-	if err := c.db.Create(&product).Error; err != nil {
+	if err := ctr.db.Create(&product).Error; err != nil {
 		log.Error().Err(err).Msg("ProductController.Store")
-		return s.Redirect().Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
+		return redirect.Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
 	}
 
-	return s.Redirect().To("/products").WithMessage(support.MessageTypeSuccess, "Product successfully created!").Now()
+	return redirect.To("/products").WithMessage(support.MessageTypeSuccess, "Product successfully created!").Now()
 }
 
 // Displays a page showing detailed data.
-func (c *productController) Show(s support.Refiber) error {
-	return c.inertia.Render().Page("products/Show", nil)
+func (ctr *productController) Show(s support.Refiber, c *fiber.Ctx) error {
+	return ctr.inertia.Render(c).Page("products/Show", nil)
 }
 
 // Displays a page for editing existing data.
-func (c *productController) Edit(s support.Refiber) error {
-	productID := s.GetCtx().Params("id")
+func (ctr *productController) Edit(s support.Refiber, c *fiber.Ctx) error {
+	productID := c.Params("id")
 
 	var wg sync.WaitGroup
 
@@ -110,7 +115,7 @@ func (c *productController) Edit(s support.Refiber) error {
 	var product models.Product
 	go func() {
 		defer wg.Done()
-		if err := c.db.Preload("Category").Find(&product, productID).Error; err != nil {
+		if err := ctr.db.Preload("Category").Find(&product, productID).Error; err != nil {
 			// TODO: check if not found
 			log.Error().Err(err).Msg("ProductController.Edit")
 		}
@@ -120,7 +125,7 @@ func (c *productController) Edit(s support.Refiber) error {
 	var categories []*models.Category
 	go func() {
 		defer wg.Done()
-		if err := c.db.Order("created_at DESC").Find(&categories).Error; err != nil {
+		if err := ctr.db.Order("created_at DESC").Find(&categories).Error; err != nil {
 			log.Error().Err(err).Msg("CategoryController.Index")
 		}
 	}()
@@ -128,14 +133,14 @@ func (c *productController) Edit(s support.Refiber) error {
 	wg.Wait()
 
 	// open page file at /resources/js/pages/product/Index.tsx
-	return c.inertia.Render().Page("products/CreateOrEdit", &fiber.Map{
+	return ctr.inertia.Render(c).Page("products/CreateOrEdit", &fiber.Map{
 		"product":    product,
 		"categories": categories,
 	})
 }
 
 // Handles a PUT request to update data.
-func (c *productController) Update(s support.Refiber) error {
+func (ctr *productController) Update(s support.Refiber, c *fiber.Ctx) error {
 	type FormData struct {
 		Title       string `validate:"required,min=3,max=100"`
 		Description *string
@@ -143,24 +148,28 @@ func (c *productController) Update(s support.Refiber) error {
 	}
 	formData := new(FormData)
 
+	redirect := s.Redirect(c)
+
 	// parse request body to formData
-	if err := s.GetCtx().BodyParser(formData); err != nil {
+	if err := c.BodyParser(formData); err != nil {
 		log.Error().Err(err).Msg("ProductController.Update")
-		return s.Redirect().Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
+		return redirect.Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
 	}
 
+	validation := s.Validation(c)
+
 	// validate formData
-	if err := s.Validate(formData); err != nil {
-		return s.Redirect().Back().Now()
+	if err := validation.Validate(formData); err != nil {
+		return redirect.Back().Now()
 	}
 
 	// get product form db
-	productID := s.GetCtx().Params("id")
+	productID := c.Params("id")
 	var product models.Product
-	if err := c.db.Find(&product, productID).Error; err != nil {
+	if err := ctr.db.Find(&product, productID).Error; err != nil {
 		// TODO: check if not found
 		log.Error().Err(err).Msg("ProductController.Update")
-		return s.Redirect().Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
+		return redirect.Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
 	}
 
 	// update product data
@@ -171,21 +180,21 @@ func (c *productController) Update(s support.Refiber) error {
 		product.CategoryID = &categoryID
 	}
 
-	if err := c.db.Save(&product).Error; err != nil {
+	if err := ctr.db.Save(&product).Error; err != nil {
 		log.Error().Err(err).Msg("ProductController.Update")
-		return s.Redirect().Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
+		return redirect.Back().WithMessage(support.MessageTypeError, "Internal Server Error").Now()
 	}
 
-	return s.Redirect().Back().WithMessage(support.MessageTypeSuccess, "Product successfully updated!").Now()
+	return redirect.Back().WithMessage(support.MessageTypeSuccess, "Product successfully updated!").Now()
 }
 
 // Handles a DELETE request to delete data.
-func (c *productController) Destroy(s support.Refiber) error {
-	productID := s.GetCtx().Params("id")
-	if err := c.db.Delete(&models.Product{}, productID).Error; err != nil {
+func (ctr *productController) Destroy(s support.Refiber, c *fiber.Ctx) error {
+	productID := c.Params("id")
+	if err := ctr.db.Delete(&models.Product{}, productID).Error; err != nil {
 		// TODO: check if not found
 		log.Error().Err(err).Msg("ProductController.Destroy")
 	}
 
-	return s.Redirect().To("/products").WithMessage(support.MessageTypeSuccess, "Product successfully deleted!").Now()
+	return s.Redirect(c).To("/products").WithMessage(support.MessageTypeSuccess, "Product successfully deleted!").Now()
 }

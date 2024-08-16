@@ -12,7 +12,7 @@ func (m *middleware) SharedWeb(c *fiber.Ctx) error {
 		"env": os.Getenv("APP_ENV"),
 	}
 
-	if err := m.app.SetSharedData(data); err != nil {
+	if err := m.app.SharedData(c).Set(data); err != nil {
 		log.Error().Err(err).Msg("middleware.Shared: failed to set Shared Data")
 	}
 

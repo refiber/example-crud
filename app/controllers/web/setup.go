@@ -8,7 +8,9 @@ import (
 )
 
 func Setup(app *app.App) *webController {
-	inertia := inertia.New(app.Refiber)
+	inertia := inertia.New(inertia.Config{
+		App: app,
+	})
 	return &webController{inertia: inertia, db: app.DB}
 }
 
